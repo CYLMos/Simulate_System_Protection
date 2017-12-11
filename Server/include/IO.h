@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ERROR0 -1
+#define ERROR -1
 #define CREATE 1
 #define READ 2
 #define WRITE 3
@@ -19,6 +19,6 @@ int init(); // init
 
 int initFile(char* fileName); // init file if they are not exist.
 
-int strtokeInput(char* input);
+int strtokInput(char* input, char* others[]);
 
 #endif // IO_H

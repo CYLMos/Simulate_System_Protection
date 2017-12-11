@@ -79,6 +79,10 @@ int main()
                     }
                     else{
                         printf("client: %s\n", inputBuffer);
+                        printf("%d\n", recvStatus);
+                        char* others[2];
+                        int behavior = strtokInput(inputBuffer, others);
+                        printf("%d\n", behavior);
                         send(i, inputBuffer, recvStatus, 0);
                     }
                 }

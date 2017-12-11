@@ -60,16 +60,60 @@ int initFile(char* fileName){
     return status;
 }
 
-int strtokeInput(char* input){
-    char *str = strtok(input, " ");
+int strtokInput(char* input, char* others[]){
+    char* str = strtok(input, " ");
     int behavior = 0;
+    //FILE* capList = fopen("capability lists", "ra");
 
     if(strcmp(str, "create") == 0){
         behavior = CREATE;
-        //if()
+
+        if((str = strtok(NULL, " ")) != NULL){
+            printf("%s\n", str);
+            char* rights = strtok(NULL, " ");
+            printf("%s\n", rights);
+            if(rights == NULL){return ERROR;}
+
+            others[0] = str;
+            others[1] = rights;
+
+            printf("%s\n", others[0]);
+            printf("%s\n", others[1]);
+
+            /*char* read;
+            ssize_t len = 0;
+            int flag = 0;
+            while(getline(&read, &len, capList) != -1){
+                if(strcmp(str, read) == 0){
+                    flag = 1;
+                    printf("This file has been exist!\n");
+                    return ERROR;
+                }
+            }
+
+            if(flag == 0){
+                char command[50] = "touch ";
+                strcat(command, str);
+                system(command);
+            }*/
+        }
+        else{
+            behavior = ERROR;
+        }
     }
 
-    while(str != NULL){
-
+    else if(strcmp(str, "read") == 0){
     }
+
+    else if(strcmp(str, "write") == 0){
+    }
+
+    else if(strcmp(str, "modify") == 0){
+    }
+
+    else{
+        behavior = ERROR;
+    }
+
+    return behavior;
 }

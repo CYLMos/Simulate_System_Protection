@@ -31,8 +31,12 @@ int main(int argc , char *argv[])
     char receiveMessage[100] = {};
     memset(receiveMessage, 0, sizeof(receiveMessage));
 
-    char* input;
-    while(scanf("%s", input) == 1){
+    char input[256];
+    while(fgets(input, 256 , stdin) != NULL){
+        if(input[strlen(input) - 1] == '\n'){
+            input[strlen(input) - 1] = '\0';
+        }
+        printf("%s\n", input);
         if(strcmp("exit", input) == 0){
             break;
         }
@@ -46,6 +50,7 @@ int main(int argc , char *argv[])
         }
 
         printf("Server: %s\n",receiveMessage);
+        memset(input, 0, sizeof(input));
     }
     printf("close Socket\n");
     close(sockFD);
