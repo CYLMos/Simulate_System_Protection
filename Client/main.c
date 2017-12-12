@@ -73,7 +73,6 @@ int main(int argc , char *argv[])
             int numbytes;
             char buff[256];
             FILE* file = fopen(fileName, "wb");
-            printf("%s\n", receiveMessage);
             if(strcmp(receiveMessage, "0") == 0){
                 printf("file is 0 bytes!\n");
             }
