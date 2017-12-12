@@ -12,6 +12,8 @@ int main()
 {
     init();
 
+    extern struct user* root;
+
     int sockFD = 0, clientSockFD= 0;
     char inputBuffer[256] = {};
     char outputBuffer[256] = {};
@@ -34,6 +36,9 @@ int main()
     serverInfo.sin_addr.s_addr = INADDR_ANY;
     serverInfo.sin_port = htons(8080);
 
+    int option = 1;
+    setsockopt(sockFD, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+
     // bind port
     if(bind(sockFD, (struct sockaddr *)&serverInfo, sizeof(serverInfo))){
         perror("bind()");
@@ -48,15 +53,16 @@ int main()
 
     while(1){
         readFD = masterFD;
+        extern int id;
 
         if(select(fdMax + 1, &readFD, NULL, NULL, NULL) == -1){
             perror("select()");
             exit(0);
         }
 
-        for(int i = 0; i <= fdMax; i++){
-            if(FD_ISSET(i, &readFD)){
-                if(i == sockFD){
+        for(id = 0; id <= fdMax; id++){
+            if(FD_ISSET(id, &readFD)){
+                if(id == sockFD){
                     if((clientSockFD = accept(sockFD, (struct sockaddr *)&clientInfo, &addrLen)) < 0){
                         perror("accept()");
                     }
@@ -66,24 +72,27 @@ int main()
                         fdMax = clientSockFD;
                     }
 
-                    printf("selectserver: new connection\n");
+                    printf("Server: new connection\n");
                 }
                 else{
-                    int recvStatus = recv(i, inputBuffer, sizeof(inputBuffer), 0);
+                    int recvStatus = recv(id, inputBuffer, sizeof(inputBuffer), 0);
                     if(recvStatus <= 0){
                         if(recvStatus < 0){perror("recv()");}
                         else if(recvStatus = 0){printf("colse connected");}
 
-                        close(i);
-                        FD_CLR(i, &masterFD);
+                        close(id);
+                        FD_CLR(id, &masterFD);
                     }
                     else{
                         printf("client: %s\n", inputBuffer);
                         printf("%d\n", recvStatus);
                         char* others[2];
                         int behavior = strtokInput(inputBuffer, others);
-                        printf("%d\n", behavior);
-                        send(i, inputBuffer, recvStatus, 0);
+
+                        char* message = doCommandLine(behavior, others);
+                        printf("%s\n", message);
+
+                        //send(id, message, strlen(message), 0);
                     }
                 }
             }
