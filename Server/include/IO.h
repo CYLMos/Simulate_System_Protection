@@ -16,6 +16,7 @@
 #define MODIFY 4
 #define LOGIN 5
 #define LOGOUT 6
+#define SHOW 7
 
 #define FILE_CREATE 0
 #define FILE_EXIST 1
@@ -50,5 +51,7 @@ int initFile(char* fileName); // init file if they are not exist.
 int strtokInput(char* input, char* others[]);
 
 char* doCommandLine(int behavior, char* others[]);
+
+int rightCheck(char* rights);
 
 #endif // IO_H

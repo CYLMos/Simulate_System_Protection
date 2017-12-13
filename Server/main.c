@@ -8,6 +8,8 @@
 
 #include <IO.h>
 
+char inputBuffer[256];
+
 int main()
 {
     init();
@@ -15,12 +17,11 @@ int main()
     extern struct user* root;
 
     int sockFD = 0, clientSockFD= 0;
-    char inputBuffer[256] = {};
-    char outputBuffer[256] = {};
     fd_set masterFD;
     fd_set readFD;
     int fdMax;
 
+    memset(inputBuffer, 0, sizeof(inputBuffer));
     // create socket
     sockFD = socket(AF_INET, SOCK_STREAM, 0);
     if(sockFD == -1){
@@ -84,13 +85,17 @@ int main()
                         FD_CLR(id, &masterFD);
                     }
                     else{
+                        int userId = id;
+
                         printf("client: %s\n", inputBuffer);
-                        printf("%d\n", recvStatus);
+
                         char* others[2];
                         int behavior = strtokInput(inputBuffer, others);
 
                         char* message = doCommandLine(behavior, others);
                         printf("%s\n", message);
+
+                        memset(inputBuffer, 0, sizeof(inputBuffer));
 
                         //send(id, message, strlen(message), 0);
                     }

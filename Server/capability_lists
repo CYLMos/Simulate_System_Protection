@@ -1,10 +1,8 @@
-hw2.c test test rwrwrw
-hw3.c test test rwrw--
-hw4.c test test rw----
-
-
-
-
-
-
-
+hw2.c CYL AOS-students rw----
+hw3.c CYL AOS-students rw--rw
+hw4.c Ken CSE-students rwrwrw
+hw5.c CYL AOS-students rwrw--
+hw6.c Ken CSE-students rwrwr-
+hw7.c CYL AOS-students rwrw--
+hw8.c CYL AOS-students rwrw--
+hw9.c CYL AOS-students rwrwrw
