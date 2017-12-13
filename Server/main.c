@@ -6,7 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#include <IO.h>
+#include "IO.h"
 
 char inputBuffer[256];
 
@@ -49,6 +49,7 @@ int main()
         perror("listen()");
     }
 
+    // add fd to master
     FD_SET(sockFD, &masterFD);
     fdMax = sockFD;
 
@@ -69,6 +70,7 @@ int main()
                     }
 
                     FD_SET(clientSockFD, &masterFD);
+                    // update fdMax
                     if(clientSockFD > fdMax){
                         fdMax = clientSockFD;
                     }
@@ -77,6 +79,8 @@ int main()
                 }
                 else{
                     int recvStatus = recv(id, inputBuffer, sizeof(inputBuffer), 0);
+
+                    // if error, close fd
                     if(recvStatus <= 0){
                         if(recvStatus < 0){perror("recv()");}
                         else if(recvStatus = 0){printf("colse connected");}
@@ -85,13 +89,15 @@ int main()
                         FD_CLR(id, &masterFD);
                     }
                     else{
-                        int userId = id;
 
                         printf("client: %s\n", inputBuffer);
 
-                        char* others[2];
+                        char* others[2]; //param
+
+                        // check behavior
                         int behavior = strtokInput(inputBuffer, others);
 
+                        //work and get message
                         char* message = doCommandLine(behavior, others);
                         printf("%s\n", message);
 

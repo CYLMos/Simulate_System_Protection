@@ -1,12 +1,16 @@
 #include "IO.h"
 
-int init(){
+//init
+void init(){
     root = (struct user *)malloc(sizeof(struct user));
+
+    //init the root
     root->name = "root";
     root->group = "root";
     root->id = -1;
     root->next = NULL;
 
+    // init capability_lists, group, user
     char* fileName[] = {"capability_lists", "group", "user"};
     for(int i = 0; i < 3; i++){
         int status = initFile(fileName[i]);
@@ -47,6 +51,7 @@ int init(){
     }
 }
 
+// init file if they are not exist.
 int initFile(char* fileName){
     FILE* file = fopen(fileName, "rb+");
     int status = FILE_EXIST;
@@ -66,6 +71,7 @@ int initFile(char* fileName){
     return status;
 }
 
+// spilit the param and check the behavior
 int strtokInput(char* input, char* others[]){
     char* str = strtok(input, " ");
     int behavior = 0;
@@ -109,9 +115,6 @@ int strtokInput(char* input, char* others[]){
             others[0] = str;
             others[1] = oa;
 
-            /*if( !(strcmp(oa, "o") == 0 || strcmp(oa, "a") == 0) ){
-                behavior = ERROR;
-            }*/
         }
         else{
             behavior = ERROR;
@@ -174,11 +177,13 @@ int strtokInput(char* input, char* others[]){
 char* doCommandLine(int behavior, char* others[]){
     FILE* capList = fopen("capability_lists", "ra");
     char* message;
+
+    // create operation
     if(behavior == CREATE){
         char* read;
         char* fileName;
         ssize_t len = 0;
-        int flag = 0;
+        int flag = 0; // 1 if file is exist
         while(getline(&read, &len, capList) != -1){
             fileName = strtok(read, " ");
             if(strcmp(others[0], fileName) == 0){
@@ -188,6 +193,7 @@ char* doCommandLine(int behavior, char* others[]){
             }
         }
 
+        // create a new file and write message in capability_lists
         if(flag == 0){
             fclose(capList);
             capList = fopen("capability_lists", "a");
@@ -213,14 +219,16 @@ char* doCommandLine(int behavior, char* others[]){
             if(noUser == 1){
                 //fprintf(capList, "%s %s %s %s\n", others[0], "test", "test", others[1]);
                 message = "no user";
-                send(id, "This file has been exist!", 25, 0);
+                send(id, "no user", 7, 0);
             }
         }
         else{
+            message = "This file has been exist!";
             send(id, "This file has been exist!", 7, 0);
         }
     }
 
+    // read operation
     else if(behavior == READ){
 
         struct user* u = root->next;
@@ -234,8 +242,10 @@ char* doCommandLine(int behavior, char* others[]){
         char* readLine;
         char* fileName;
         ssize_t len = 0;
-        int flag = 0;
-        int canAccess = 0;
+        int flag = 0;  // if 1 means file is exist, 0 is not
+        int canAccess = 0;  // 1 denote user can access
+
+        // read line by line
         while(getline(&readLine, &len, capList) != -1){
             fileName = strtok(readLine, " ");
             if(strcmp(others[0], fileName) == 0){
@@ -266,24 +276,26 @@ char* doCommandLine(int behavior, char* others[]){
                     FILE* file = fopen(fileName, "rb");
                     char buff[256];
                     int numbytes = 0;
-                    int sendFlag = 0;
+                    int sendFlag = 0; // has send the first message is 1
+                    int zeroFlag = 0; // 1 if file is zero bytes
                     while(1){
                         if(!feof(file)){
                             numbytes = fread(buff, sizeof(char), sizeof(buff), file);
                             if(numbytes == 0 && sendFlag == 0){
                                 send(id, "0", 1, 0);
                                 sendFlag = 1;
+                                zeroFlag = 1;
                             }
                             else{
-                                if(sendFlag == 0){send(id, "has file", 8, 0); sendFlag == 1;}
+                                if(sendFlag == 0){send(id, "has file", 8, 0); sendFlag == 1; sleep(1);}
 		                        numbytes = write(id, buff, numbytes);
 		                        printf("\rSending %d bytes",numbytes);
 		                        fflush(stdout);
 		                    }
 		                }
 		                else{
-		                    sleep(1);
-		                    write(id, "00", 2);
+		                    sleep(1.5);
+		                    if(zeroFlag == 1)write(id, "00", 2);
 		                    break;
 		                }
                     }
@@ -309,6 +321,7 @@ char* doCommandLine(int behavior, char* others[]){
 
     }
 
+    // write operation
     else if(behavior == WRITE){
         struct user* u = root->next;
         while(u != NULL){
@@ -321,8 +334,10 @@ char* doCommandLine(int behavior, char* others[]){
         char* readLine;
         char* fileName;
         ssize_t len = 0;
-        int flag = 0;
-        int canAccess = 0;
+        int flag = 0;  // if 1 means file is exist, 0 is not
+        int canAccess = 0; // 1 denote user can access
+
+        // read lin by line
         while(getline(&readLine, &len, capList) != -1){
             fileName = strtok(readLine, " ");
             if(strcmp(others[0], fileName) == 0){
@@ -376,6 +391,7 @@ char* doCommandLine(int behavior, char* others[]){
                         //memset(recvBuff, 0, sizeof(recvBuff));
                     }
 
+                    // if get "00" means over
                     if(strcmp(inputBuffer, "00") != 0){
                         numbytes = fwrite(inputBuffer, sizeof(char), numbytes, file);
                         printf("download %d bytes\n", numbytes);
@@ -403,6 +419,7 @@ char* doCommandLine(int behavior, char* others[]){
         u = NULL;
     }
 
+    // modify operation
     else if(behavior == MODIFY){
         struct user* u = root->next;
 
@@ -416,15 +433,15 @@ char* doCommandLine(int behavior, char* others[]){
         char* readLine;
         char* fileName;
         ssize_t len = 0;
-        int flag = 0;
-        int canAccess = 0;
-        FILE* capWrite = fopen("target", "a");
+        int flag = 0;  // 1 if find the file
+        int canAccess = 0;  // 1 denote user can access
+        FILE* capWrite = fopen("target", "a");  //create new file name 'target'
         int lineLen;
-        int status = 0;
+        int status = 0;  // 1 can change rights , -1 can not change
 
-
+        // read lin by line
         while((lineLen = getline(&readLine, &len, capList)) != -1){
-            char* s = strdup(readLine);
+            char* s = strdup(readLine);  //cp
             fileName = strtok(s, " ");
 
             if(strcmp(others[0], fileName) == 0){
@@ -441,7 +458,7 @@ char* doCommandLine(int behavior, char* others[]){
                     else{
                         status = -1;
                         message = "You can't change!";
-                        system("rm target");
+                        system("rm target");  //if can not change rights, rm target
                         break;
                     }
                 }
@@ -453,6 +470,8 @@ char* doCommandLine(int behavior, char* others[]){
 
         if(flag != 0){
             if(status == -1){send(id, "You can't change!", 17, 0);}
+
+            // rm origin capability_lists and use target to replace
             else if(status == 1){
                 system("rm capability_lists");
                 system("mv target capability_lists");
@@ -470,14 +489,16 @@ char* doCommandLine(int behavior, char* others[]){
 
     }
 
+    //login operation
     else if(behavior == LOGIN){
-        struct user* u;
-        struct user* pre;
+        struct user* u;  //current
+        struct user* pre;  //previous
         int hasLogin = 0;
         int hasUser = 0;
         int loginSuccess = 0;
         u = root->next;
         pre = root;
+
         while(u != NULL){
             hasUser = 1;
             if(strcmp(others[0], u->name) == 0){
@@ -495,6 +516,7 @@ char* doCommandLine(int behavior, char* others[]){
             ssize_t len = 0;
             int lineLen;
 
+            // read lin by line
             while((lineLen = getline(&readLine, &len, file)) != -1){
                 char* group = strtok(readLine, " ");
                 char* name = strtok(NULL, " ");
@@ -534,10 +556,11 @@ char* doCommandLine(int behavior, char* others[]){
         pre = NULL;
     }
 
+    // logout operation
     else if(behavior == LOGOUT){
-        struct user* u;
-        struct user* pre;
-        struct user* next;
+        struct user* u;  // current
+        struct user* pre;  // previous
+        struct user* next;  // next
         int hasLogin = 1;
         pre = root;
         u = root->next;
@@ -568,17 +591,19 @@ char* doCommandLine(int behavior, char* others[]){
         pre = NULL;
         next = NULL;
     }
+
+    // show operation
     else if(behavior == SHOW){
-        FILE* file = fopen("capability_lists", "r");
         char* read;
         ssize_t len = 0;
         while(getline(&read, &len, capList) != -1){
             send(id, read, strlen(read), 0);
         }
-        sleep(1);
+        sleep(1.5);
         send(id, "00", 2, 0);
     }
 
+    // error
     else{
         message = "ERROR!";
         send(id, "ERROR!", 6, 0);
@@ -590,10 +615,14 @@ char* doCommandLine(int behavior, char* others[]){
 
 }
 
+// right string check
 int rightCheck(char* rights){
+    // length equal 6
     if(strlen(rights) != RIGHT_LEN){
         return 0;
     }
+
+    //r, w and - have to legal
     for(int i = 0; i < RIGHT_LEN; i++){
         char c = i % 2 == 0 ? 'r' : 'w';
         if(rights[i] != c && rights[i] != '-'){

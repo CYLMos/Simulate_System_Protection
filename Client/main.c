@@ -6,23 +6,25 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define ERROR -1
-#define CREATE 1
-#define READ 2
-#define WRITE 3
-#define MODIFY 4
-#define LOGIN 5
-#define LOGOUT 6
-#define SHOW 7
+#define ERROR -1  //error state
+#define CREATE 1  //create state
+#define READ 2  //read state
+#define WRITE 3  //write state
+#define MODIFY 4  //modify state
+#define LOGIN 5  //login state
+#define LOGOUT 6  //logout state
+#define SHOW 7  //show state
 
+//check the command behavior
 int checkCommand(char*);
 
 char* fileName;
-int loginFlag = 0;
+int loginFlag = 0;  //1 if has login
 
 int main(int argc , char *argv[])
 {
     int sockFD = 0;
+    //create socket
     sockFD = socket(AF_INET , SOCK_STREAM , 0);
 
     if (sockFD == -1){
@@ -36,27 +38,33 @@ int main(int argc , char *argv[])
     info.sin_port = htons(8080);
 
 
+    //connect
     if(connect(sockFD,(struct sockaddr *)&info,sizeof(info)) == -1){
         perror("connect()");
     }
 
 
     char receiveMessage[100] = {};
-    memset(receiveMessage, 0, sizeof(receiveMessage));
 
     char input[256];
     printf(">");
     while(fgets(input, 256 , stdin) != NULL){
+        memset(receiveMessage, 0, sizeof(receiveMessage));  //init receiveMessage
+
+        //replace \n to \0
         if(input[strlen(input) - 1] == '\n'){
             input[strlen(input) - 1] = '\0';
         }
 
+        // if input is exit, leave this programe
         if(strcmp("exit", input) == 0){
             break;
         }
 
+        // check command
         int status = checkCommand(input);
 
+        // create operation
         if(status == CREATE && loginFlag == 1){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
@@ -67,6 +75,7 @@ int main(int argc , char *argv[])
             }
         }
 
+        // read operation
         else if(status == READ && loginFlag == 1){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
@@ -74,13 +83,17 @@ int main(int argc , char *argv[])
             recv(sockFD, receiveMessage, sizeof(receiveMessage), 0);
 
             int numbytes;
+            int flag = 0;
             char buff[256];
             memset(buff, 0, sizeof(buff));
             FILE* file = fopen(fileName, "wb");
-            if(strcmp(receiveMessage, "no file!") != 0){;
+
+            // if receiveMessage is not "no file!" and "ERROR!", download data
+            if(strcmp(receiveMessage, "no file!") != 0 && strcmp(receiveMessage, "ERROR!") != 0){
                 numbytes = read(sockFD, buff, sizeof(buff));
                 if(strcmp(receiveMessage, "0") == 0){
                     printf("file is 0 bytes!\n");
+                    flag = 1;
                 }
 
                 if(strcmp(buff, "00") != 0){
@@ -94,13 +107,15 @@ int main(int argc , char *argv[])
             fclose(file);
         }
 
+        // wrte operation
         else if(status == WRITE && loginFlag == 1){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
             }
             recv(sockFD, receiveMessage, sizeof(receiveMessage), 0);
 
-            if(strcmp(receiveMessage, "no file!") != 0){
+            // if receiveMessage is not "no file!" and "ERROR!", upload data
+            if(strcmp(receiveMessage, "no file!") != 0 && strcmp(receiveMessage, "ERROR!") != 0){
                 int numbytes;
                 int sendFlag = 0;
                 char buff[256];
@@ -109,13 +124,14 @@ int main(int argc , char *argv[])
                 while(1){
                     if(!feof(file)){
                         numbytes = fread(buff, sizeof(char), sizeof(buff), file);
+                        //has file but its capacity is 0
                         if(numbytes == 0 && sendFlag == 0){
                             send(sockFD, "0", 1, 0);
                             sendFlag = 1;
                             flag = 1;
                         }
                         else{
-                            if(sendFlag == 0){send(sockFD, "has file", 8, 0); sendFlag == 1;}
+                            if(sendFlag == 0){send(sockFD, "has file", 8, 0); sendFlag == 1;sleep(1);}
 
                             numbytes = write(sockFD, buff, numbytes);
                             printf("\rSending %d bytes",numbytes);
@@ -123,8 +139,8 @@ int main(int argc , char *argv[])
                         }
                     }
                     else{
-                        sleep(1);
-                        if(flag == 1){write(sockFD, "00", 2);}
+                        sleep(1.5);
+                        if(flag == 1){write(sockFD, "00", 2);}  // if capacity is zero, send "00" to tell the end
                         break;
                     }
                 }
@@ -137,6 +153,7 @@ int main(int argc , char *argv[])
             }*/
         }
 
+        // modify operation
         else if(status == MODIFY && loginFlag == 1){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
@@ -144,6 +161,7 @@ int main(int argc , char *argv[])
             recv(sockFD, receiveMessage, sizeof(receiveMessage), 0);
         }
 
+        // login operation
         else if(status == LOGIN && loginFlag == 0){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
@@ -152,15 +170,20 @@ int main(int argc , char *argv[])
             if(strcmp(receiveMessage, "login success!") == 0){loginFlag = 1;}
         }
 
+        // logout operation
         else if(status == LOGOUT && loginFlag == 1){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
             }
             recv(sockFD, receiveMessage, sizeof(receiveMessage), 0);
-            printf("Server: %s\n",receiveMessage);
-            loginFlag = 0;
-            break;
+            if(strcmp(receiveMessage, "logout success!") == 0){
+                printf("Server: %s\n",receiveMessage);
+                loginFlag = 0;
+                break;
+            }
         }
+
+        // show operation
         else if(status == SHOW && loginFlag == 1){
             if(send(sockFD, input, sizeof(input), 0) < 0){
                 perror("send()");
@@ -181,6 +204,8 @@ int main(int argc , char *argv[])
             }
             printf("\n");
         }
+
+        // error
         else{
             if(loginFlag == 0){
                 printf("You must login first!\n");
@@ -192,7 +217,6 @@ int main(int argc , char *argv[])
 
         printf("Server: %s\n",receiveMessage);
         memset(input, 0, sizeof(input));
-        memset(receiveMessage, 0, sizeof(receiveMessage));
 
         printf(">");
     }
